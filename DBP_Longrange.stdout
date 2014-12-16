@@ -1,0 +1,48 @@
+Sender: LSF System <lsfadmin@cpt03>
+Subject: Job 273721: <DBP> in cluster <el> Exited
+
+Job <DBP> was submitted from host <frt> by user <somidi> in cluster <el>.
+Job was executed on host(s) <cpt03>, in queue <normal>, as user <somidi> in cluster <el>.
+</home/somidi> was used as the home directory.
+</home/somidi/codes/CyclicX> was used as the working directory.
+Started at Thu Nov 20 14:10:39 2014
+Results reported at Thu Nov 20 14:10:41 2014
+
+Your job looked like:
+
+------------------------------------------------------------
+# LSBATCH: User input
+#!/bin/bash
+#BSUB -L /bin/bash
+#BSUB -o DBP_Longrange.stdout
+#BSUB -e DBP_Longrange.stderr
+#BSUB -J DBP
+#BSUB -q normal
+
+cd /scratch/cluster/monthly/somidi/DBP.Long.Range.Interaction
+/home/somidi/codes/CyclicX/covarying_signal_identification.py -i Dbp -d Peaks_quantif_normalized_annotated.txt.distal.gz -g Peaks_quantif_normalized_annotated.txt.header > result
+------------------------------------------------------------
+
+Exited with exit code 1.
+
+Resource usage summary:
+
+    CPU time :               0.85 sec.
+    Max Memory :             21.21 MB
+    Average Memory :         21.21 MB
+    Total Requested Memory : -
+    Delta Memory :           -
+    (Delta: the difference between total requested memory and actual max usage.)
+    Max Swap :               468 MB
+
+    Max Processes :          4
+    Max Threads :            5
+
+The output (if any) follows:
+
+
+
+PS:
+
+Read file <DBP_Longrange.stderr> for stderr output of this job.
+

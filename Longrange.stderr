@@ -1,0 +1,17 @@
+Traceback (most recent call last):
+  File "/home/somidi/codes/CyclicX/covarying_signal_identification.py", line 194, in <module>
+    main()
+  File "/home/somidi/codes/CyclicX/covarying_signal_identification.py", line 190, in main
+    process(args.datafile, args.distalfile, args.headerfile)
+  File "/home/somidi/codes/CyclicX/covarying_signal_identification.py", line 145, in process
+    data = loadData(datafile)
+  File "/home/somidi/codes/CyclicX/covarying_signal_identification.py", line 45, in loadData
+    with open(datafile) as inf:
+IOError: [Errno 2] No such file or directory: '/home/somidi/archive/CyclicX/Peaks_quantif_normalized_annotated.txt'
+/home/somidi/codes/CyclicX/covarying_signal_identification.py:96: RuntimeWarning: divide by zero encountered in log
+  return (np.log(mat) - Normalization)
+/home/somidi/codes/CyclicX/covarying_signal_identification.py:104: RuntimeWarning: divide by zero encountered in log
+  return (np.log(mat) - Normalization)
+/Home/somidi/codes/CyclicX/dependency_model.py:36: RuntimeWarning: invalid value encountered in double_scalars
+  beta -= .5 * prod( y, M, y.T )
+User defined signal 2

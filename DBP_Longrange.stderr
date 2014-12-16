@@ -1,0 +1,10 @@
+Traceback (most recent call last):
+  File "/home/somidi/codes/CyclicX/covarying_signal_identification.py", line 195, in <module>
+    main()
+  File "/home/somidi/codes/CyclicX/covarying_signal_identification.py", line 191, in main
+    process(args.datafile, args.distalfile, args.headerfile)
+  File "/home/somidi/codes/CyclicX/covarying_signal_identification.py", line 146, in process
+    data = loadData(datafile)
+  File "/home/somidi/codes/CyclicX/covarying_signal_identification.py", line 55, in loadData
+    data[ZT][mark] = np.array(data[ZT][mark])
+KeyError: 'ZT02'

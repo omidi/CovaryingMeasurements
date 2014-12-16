@@ -1,0 +1,14 @@
+# /bin/bash
+#BSUB -L /bin/bash
+#BSUB -o test.stdout
+#BSUB -e test.stderr
+#BSUB -J test 
+#BSUB -q normal
+
+
+cd /scratch/cluster/monthly/somidi/Enhancer.Project
+cp /home/somidi/archive/CyclicX/ref . 
+cp /home/somidi/archive/CyclicX/Dbp_bin_quantification.gz .
+cp /home/somidi/archive/CyclicX/Dbp_bin_quantification.gz.tbi .
+/home/somidi/codes/CyclicX/parse_file.py ref Dbp_bin_quantification.gz
+cp test.stdout /home/somidi/archive/CyclicX/.

@@ -40,20 +40,13 @@ def mleFit(rep1, rep2):
     return sigmaMidd
 
 
-# def empiricalFit(rep1, rep2):
-#     N, M = np.sum(rep1), np.sum(rep2)
-#     logRatio = np.log(rep1/N) - np.log(rep2/M)
-#     meanRatio = np.mean(logRatio)
-#     sigmaEstimate = 1./(len(rep1)-1.) * np.sum(np.power(logRatio - meanRatio, 2.0))
-#     return sigmaEstimate
-
-
 def empiricalFit(rep1, rep2):
-    diff = rep1 - rep2
-    meanDiff = np.mean(diff)
-    sigmaEstimate = 1./(len(rep1)-1.) * np.sum(np.power(diff - meanDiff, 2.0))
+    N, M = np.sum(rep1), np.sum(rep2)    
+    logRatio = np.log(rep1/N) - np.log(rep2/M)
+    meanRatio = np.mean(logRatio)
+    sigmaEstimate = 1./(len(rep1)-1.) * np.sum(np.power(logRatio - meanRatio, 2.0))
     return sigmaEstimate
-
+            
 
 def main():
     if len(sys.argv)!=3:

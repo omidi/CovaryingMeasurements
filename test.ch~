@@ -1,0 +1,13 @@
+#!/bin/bash
+#BSUB -L /bin/bash
+#BSUB -o Lung.stdout
+#BSUB -e Lung.stderr
+#BSUB -J mapped_DNAse1:ENCODE_samp_455_meas_1372
+#BSUB -n 4
+#BSUB -R "span[ptile=4]"
+#BSUB -R "rusage[mem=4000]"
+#BSUB -M 4194304
+#BSUB -q normal
+
+tar -xavf /scratch/cluster/monthly/somidi/DNAse1:ENCODE/ENCODE:Dgf:Lung/wgEncodeUwDgfLungC57bl6MAdult8wksRawDataRep1.fastq.tgz --index-file=/scratch/cluster/monthly/somidi/DNAse1:ENCODE/ENCODE:Dgf:Lung/wgEncodeUwDgfLungC57bl6MAdult8wksRawDataRep1.fastq.text -C /scratch/el/monthly/somidi/DNAse1:ENCODE/ENCODE:Dgf:Lung/
+bowtie2 --threads 4 -x `genrep4humans.py -B -a mm10 | tail -n 1 -` -U `cat /scratch/el/monthly/somidi/DNAse1:ENCODE/ENCODE:Dgf:Lung/wgEncodeUwDgfLungC57bl6MAdult8wksRawDataRep1.fastq.text | sed 's#^#/scratch/el/monthly/somidi/DNAse1:ENCODE/ENCODE:Dgf:Lung#' | tr '\n' ',' | sed 's/,$//'` -S /scratch/el/monthly/somidi/DNAse1:ENCODE/ENCODE:Dgf:Lung/wgEncodeUwDgfLungC57bl6MAdult8wksRawDataRep1.sam -v 3 -a -B 1 --quiet --best --strata -m 100

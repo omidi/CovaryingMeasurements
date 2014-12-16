@@ -8,8 +8,8 @@ import pysam
 import numpy as np
 from fitting_codependencies import dotProduct
 from itertools import combinations_with_replacement
-from fitting_variance import mleFit, empiricalFit
-from dependency_model import dependencyScore, flatLikelihoodScore
+from fitting_variance import mleFit
+from dependency_model import dependencyScore
 
 
 TIMES=['ZT02', 'ZT06', 'ZT10', 'ZT14', 'ZT18', 'ZT22', 'ZT26']
@@ -43,7 +43,6 @@ def arguments():
     return args
 
 
-
 def loadData(datafile):
     data = {}
     with open(datafile) as inf:        
@@ -55,11 +54,8 @@ def loadData(datafile):
                     data[ZT][mark].append(float(record[mark + ZT]))
     for ZT in TIMES:
         for mark in MARKS:
-            data[ZT][mark] = np.log2((np.array(data[ZT][mark]) + 1.0))    # plus 1.0 is the pseudo-count
-            data[ZT][mark] -= np.mean(data[ZT][mark])
-            data[ZT][mark] /= np.std(data[ZT][mark])
+            data[ZT][mark] = np.array(data[ZT][mark]) + 1.0    # plus 1.0 is the pseudo-count
     return data
-
 
 
 def convertToSlope(X):
@@ -80,13 +76,13 @@ def calculateCovarianceMatrix(data):
     covarianceMatrix = np.zeros(len(MARKS)**2).reshape(len(MARKS), len(MARKS))
     for mark in MARKS:
         index = INDEX[mark]
-        # rep1, rep2 = [], []
-        # for a, b in zip(data[TIMES[0]][mark], data[TIMES[-1]][mark]):
-        #     if a > 5. and b > 5.:
-        #         rep1.append(a)
-        #         rep2.append(b)
+        rep1, rep2 = [], []
+        for a, b in zip(data[TIMES[0]][mark], data[TIMES[-1]][mark]):
+            if a > 5. and b > 5.:
+                rep1.append(a)
+                rep2.append(b)
         covarianceMatrix[index][index] = \
-          empiricalFit( data[TIMES[0]][mark], data[TIMES[-1]][mark] )
+          mleFit( np.array(rep1), np.array(rep2) )
     return covarianceMatrix
 
 
@@ -100,14 +96,14 @@ def gaussian_weight(x):
     return np.exp( -0.5*x**2 )
 
 
-def convert2MatrixProximal(record, queryFile, width, headerIndex, Mean, SD):
-    mat = np.zeros(len(TIMES)*len(MARKS)).reshape(len(MARKS), len(TIMES))
+def convert2MatrixProximal(record, queryFile, width, Normalization, headerIndex, Mean):
+    mat = np.zeros(len(TIMES)*len(MARKS)).reshape(len(MARKS), len(TIMES))   
     records = [record]
-    weights = [1.]
+    weights = [1.]    
     start = int(record[ headerIndex['DHSpeak'] ])
     if (start-2000) < 0:
         start = 2000
-    for distalRegion in queryFile.fetch(record[ headerIndex['chrom'] ], start-2500, start+2500):
+    for distalRegion in queryFile.fetch(record[ headerIndex['chrom'] ], start-2500, start+2500):       
         record = distalRegion.split()
         if int(record[1])==start:  # if it's excatly the same record
             continue
@@ -119,13 +115,14 @@ def convert2MatrixProximal(record, queryFile, width, headerIndex, Mean, SD):
         for mark, m in zip(MARKS, range(len(MARKS))):
             for ZT, t in zip(TIMES, range(len(TIMES))):
                 mat[INDEX[mark]][t] += weight*float(record[ headerIndex[mark + ZT] ])
-    X = np.log2(mat + 1.0)
-    X -= Mean
-    X /= SD
-    return X
+    M = (np.log(mat) - Normalization)
+    M -= Mean 
+    # print M 
+    # print M[:, 1:] - M[:, :-1]    
+    return M
 
 
-def convert2MatrixDistal(row, queryFile, width, headerIndex, Mean, SD):
+def convert2MatrixDistal(row, queryFile, width, Normalization, headerIndex, Mean):
     mat = np.zeros(len(TIMES)*len(MARKS)).reshape(len(MARKS), len(TIMES))
     record = row.split()
     records = [record]
@@ -145,11 +142,9 @@ def convert2MatrixDistal(row, queryFile, width, headerIndex, Mean, SD):
         for mark, m in zip(MARKS, range(len(MARKS))):
             for ZT, t in zip(TIMES, range(len(TIMES))):
                 mat[INDEX[mark]][t] += weight*float(record[ headerIndex[mark + ZT] ])
-    # M = (np.log(mat) - Normalization)
-    X = np.log2(mat + 1.0)
-    X -= Mean
-    X /= SD    
-    return X
+    M = (np.log(mat) - Normalization)
+    M -= Mean
+    return M
 
 
 def calculateNormalization(data):
@@ -160,31 +155,12 @@ def calculateNormalization(data):
     return normalizationMatrix
 
 
-def calculateMeanSdMatrix(datafile):
-    data = {}
-    with open(datafile) as inf:
-        for record in csv.DictReader(inf, delimiter='\t'):
-            for ZT in TIMES:
-                data.setdefault(ZT, {})
-                for mark in MARKS:
-                    data[ZT].setdefault(mark, [])
-                    data[ZT][mark].append(float(record[mark + ZT]))
-    M = np.zeros(len(TIMES)*len(MARKS)).reshape(len(MARKS), len(TIMES))
-    S = np.zeros(len(TIMES)*len(MARKS)).reshape(len(MARKS), len(TIMES))
-    for mark, m in zip(MARKS, range(len(MARKS))):
-        for ZT, t in zip(TIMES, range(len(TIMES))):
-            x = np.log2((np.array(data[ZT][mark]) + 1.0))
-            M[m][t] = np.mean(x)
-            S[m][t] = np.std(x)
-    return M, S
-
-
-def calculateSdMatrix(data):
+def calculateMeanMatrix(data, N):
     M = np.zeros(len(TIMES)*len(MARKS)).reshape(len(MARKS), len(TIMES))    
     for mark, m in zip(MARKS, range(len(MARKS))):
         for ZT, t in zip(TIMES, range(len(TIMES))):
-            v = data[ZT][mark]
-            M[m][t] = np.std(v) 
+            v = np.log(data[ZT][mark])
+            M[m][t] = np.sum(v - N[m][t]) / len(v) 
             # M[m][t] = np.sum(v)/len(v)
     return M
 
@@ -204,7 +180,7 @@ def plot(X,Y, name):
         ]))
     f.close()
     os.system('/software/R/3.0.2/bin/Rscript %s' % (name + '.R'))
-    os.system('rm %s %s' % (name + '.R', name))
+    os.system('rm %s' % (name + '.R'))
     # os.system('convert %s.pdf %s.png' % (name, name))
     return (name + '.pdf')
 
@@ -212,73 +188,51 @@ def plot(X,Y, name):
 def process(datafile, anchorfile, distalfile, headerfile):
     data = loadData(datafile)
     headerIndex = loadHeader(headerfile)
-    S = calculateCorrelationMatrix(data)
+    # S = calculateCorrelationMatrix(data)
+    S = np.identity(len(MARKS))
     C = calculateCovarianceMatrix(data)
-    S = C*S
-    # C = 0.001*np.identity(len(MARKS))
-    # N = calculateNormalization(data)
-    M, SD = calculateMeanSdMatrix(datafile)
-    offset = 2000000  ## search 4 Mbp up/downstream
-    width_of_gaussian = 1000
+    N = calculateNormalization(data)
+    M = calculateMeanMatrix(data, N)
+    offset = 2000000  ## search 1 Mbp up/downstream
+    width_of_gaussian = 500
     queryFile = pysam.Tabixfile(distalfile)
-    count = 0
+    
     with open(anchorfile) as inf:
         for record in csv.reader(inf, delimiter='\t'):
-            X = convert2MatrixProximal(record, queryFile, width_of_gaussian, headerIndex, M, SD)
+            X = convert2MatrixProximal(record, queryFile, width_of_gaussian, N, headerIndex, M)
             X_slope = convertToSlope(X)
             start = int(record[ headerIndex['DHSpeak'] ]) - offset
             if start < 0:
                 start = 0
-            end = int(record[ headerIndex['DHSpeak'] ]) + offset
-            detectedDistalRegions = [i for i in queryFile.fetch(record[ headerIndex['chrom'] ], start, end)]
-            for detectedDistalRegion in detectedDistalRegions:
-                Y = convert2MatrixDistal(detectedDistalRegion, queryFile, width_of_gaussian, headerIndex, M,  SD)
+            end = start + offset
+            for distalRegion in queryFile.fetch(record[ headerIndex['chrom'] ], start, end):
+                Y = convert2MatrixDistal(distalRegion, queryFile, width_of_gaussian, N, headerIndex, M)
                 Y_slope = convertToSlope(Y)
-                count += 1
-            # for xs in xrange(20):
-            #     tmpX = []
-            #     tmpY = []
-            #     for i in xrange(len(MARKS)):
-            #         tmpX.append(np.random.normal(0., 1., len(TIMES)))
-            #         tmpY.append(np.random.normal(0., 1., len(TIMES)))
-
-            #     X = np.array(tmpX)
-            #     Y = np.array(tmpY)
-            #     Z = np.copy(X)
-            #     # adding the noise
-            #     for i in xrange(len(MARKS)):
-            #         X[i] += np.random.normal(0., C[i][i], len(TIMES))
-            #         Y[i] += np.random.normal(0., C[i][i], len(TIMES))
-            #         Z[i] += np.random.normal(0., C[i][i], len(TIMES))
                 score = dependencyScore(X, Y, C, S)
                 score_slope = dependencyScore(X_slope, Y_slope, C, S)
-                score_flat = flatLikelihoodScore(X, Y, C, S)
                 if score > 0 or True:
-                    distalRecord = detectedDistalRegion.split()
+                    distalRecord = distalRegion.split()
                     if distalRecord[headerIndex['index']] == '':
-                        distalRecord[headerIndex['index']] == 'unknown' 
+                        distalRecord[headerIndex['index']] == 'unknown'                    
                     print '\t'.join([
                         record[headerIndex['index']],
                         distalRecord[headerIndex['index']],
-                        str( score ),
-                        str( score_flat ),
-                        str(score_slope),
                         str( int(record[1]) - int(distalRecord[1]) ),
-                        record[headerIndex['Genename']],
+                        str(score),
+                        str(score_slope),
+                        str(dependencyScore(X, X, C, S)),
+                        str(dependencyScore(Y, Y, C, S)),                        
                         ])
-                if (score_flat>0.):
-                    fname = record[headerIndex['index']] + '_' + distalRecord[headerIndex['index']]
-                    f = open(fname, 'w')
-                    for mark, m in zip(MARKS, range(len(MARKS))):
-                        for t in xrange(len(TIMES)):
-                            f.write('%f\t%f\n' % (X[m][t], Y[m][t]))
-                    f.close()
-                    plot(X, Y, fname)                                    
+                    # if score>(0.):
+                    #     fname = record[headerIndex['index']] + '_' + distalRecord[headerIndex['index']]
+                    #     f = open(fname, 'w')
+                    #     for mark, m in zip(MARKS, range(len(MARKS))):
+                    #         for t in xrange(len(TIMES)):
+                    #             f.write('%f\t%f\n' % (X[m][t], Y[m][t]))
+                    #     f.close()
+                    #     plot(X, Y, fname)                        
+                        # exit()
 
-                
-                
-
-                        
 def main():
     args = arguments()
     process(args.datafile, args.anchorfile, args.distalfile, args.headerfile)
